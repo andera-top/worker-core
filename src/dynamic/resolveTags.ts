@@ -6,7 +6,7 @@ export function resolveTags(dir: string): string[] {
   if (!fs.existsSync(dir)) return []
   return fs
     .readdirSync(dir)
-    .filter(f => (f.endsWith('.ts') || f.endsWith('.js')) && !f.startsWith('.') && !f.startsWith('_'))
+    .filter(f => (f.endsWith('.ts') || f.endsWith('.js')) && !f.endsWith('.d.ts'))
     .map(f => path.resolve(dir, f))
 }
 

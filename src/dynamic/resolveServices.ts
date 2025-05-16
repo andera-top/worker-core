@@ -12,7 +12,7 @@ export async function resolveServices(dir: string): Promise<void> {
   const files = fs
     .readdirSync(dir)
     .filter(f => !f.startsWith('.') && !f.startsWith('_'))
-    .filter(f => f.endsWith('.ts') || f.endsWith('.js'))
+    .filter(f => (f.endsWith('.ts') || f.endsWith('.js')) && !f.endsWith('.d.ts'))
 
   for (const file of files) {
     const name = path.basename(file, path.extname(file))

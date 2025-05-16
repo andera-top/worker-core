@@ -10,7 +10,7 @@ export async function resolveFunctions(dir: string): Promise<Map<string, Functio
   const files = fs
     .readdirSync(dir)
     .filter(f => !f.startsWith('.') && !f.startsWith('_'))
-    .filter(f => f.endsWith('.ts') || f.endsWith('.js'))
+    .filter(f => (f.endsWith('.ts') || f.endsWith('.js')) && !f.endsWith('.d.ts'))
 
   for (const file of files) {
     const name = path.basename(file, path.extname(file)).replace('.example', '')
