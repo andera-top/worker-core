@@ -19,6 +19,7 @@ export const config = {
     },
   },
   enableOpenAPI: process.env.OPENAPI_ENABLED?.toLowerCase() === 'true',
+  requestBodyLimit: process.env.REQUEST_BODY_LIMIT || '10mb',
 }
 
 function assertConfig() {

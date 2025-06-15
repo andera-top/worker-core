@@ -20,7 +20,7 @@ configureSlots(config.worker.slots)
 const app = express()
 
 app.use(compression())
-app.use(express.json())
+app.use(express.json({ limit: config.requestBodyLimit }))
 
 function mountControllers(app: express.Application) {
   app.use(defaultController)
