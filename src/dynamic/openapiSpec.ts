@@ -28,11 +28,13 @@ function paramsToOpenAPI(params: { [key: string]: ParamSchema }) {
     if (def.pattern) prop.pattern = def.pattern
     if (def.min !== undefined) {
       if (def.type === 'number') prop.minimum = def.min
-      if (def.type === 'string' || def.type === 'array') prop.minLength = def.min
+      if (def.type === 'string') prop.minLength = def.min
+      if (def.type === 'array') prop.minItems = def.min
     }
     if (def.max !== undefined) {
       if (def.type === 'number') prop.maximum = def.max
-      if (def.type === 'string' || def.type === 'array') prop.maxLength = def.max
+      if (def.type === 'string') prop.maxLength = def.max
+      if (def.type === 'array') prop.maxItems = def.max
     }
     properties[name] = prop
     if (def.required) required.push(name)
@@ -48,8 +50,19 @@ export function getOpenAPISpec() {
     oneOfSchemas.push({
       title: name,
       type: 'object',
-      properties: { function: { type: 'string', enum: [name] }, ...properties },
-      required: ['function', ...required],
+      properties: {
+        function: { type: 'string', enum: [name] },
+        contract: { type: 'integer', minimum: 1 },
+        input: { type: 'object', properties, required, additionalProperties: false },
+        priority: { type: 'integer', minimum: 1, maximum: 2097152, default: 1 },
+        mode: { type: 'string', enum: ['sync', 'stream', 'webhook'], default: 'sync' },
+        webhook: {
+          type: 'object',
+          properties: { url: { type: 'string', format: 'uri' }, headers: { type: 'object' } },
+          required: ['url'],
+        },
+      },
+      required: ['function', 'contract'],
     })
   }
 

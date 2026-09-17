@@ -16,7 +16,7 @@ export async function sendWebhook(url: string, data: any, customHeaders?: Record
           ...(customHeaders || {}),
         },
       })
-      log('[WEBHOOK]', `Webhook sent successfully to ${url}`)
+      log('[WEBHOOK]', 'Webhook sent successfully')
       return
     } catch (err: any) {
       log('[WEBHOOK]', `Webhook attempt ${attempt}/${maxRetries + 1} failed:`, err.message)

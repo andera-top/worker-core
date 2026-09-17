@@ -6,6 +6,7 @@ import type { FunctionDefinition } from '../types/task.types'
 const functions = new Map<string, FunctionDefinition>()
 
 export async function resolveFunctions(dir: string): Promise<Map<string, FunctionDefinition>> {
+  functions.clear()
   if (!fs.existsSync(dir)) return new Map()
   const files = fs
     .readdirSync(dir)

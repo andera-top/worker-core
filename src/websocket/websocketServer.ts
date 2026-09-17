@@ -4,12 +4,24 @@ import { isInMaintenance, getAvailableSlots, getUsedSlots, getMaxSlots } from '.
 import { getQueueLength } from '../slots/taskQueue'
 import { log } from '../utils/logger'
 import { getCpuLoad, getUsedMemoryPercent } from '../utils/systemStats'
-import { getServicesHealth } from '../dynamic/resolveServices'
+import { areAllServicesUp, getServicesHealth } from '../dynamic/resolveServices'
 
 let wss: WebSocketServer | null = null
+let broadcastRunning = false
+let statusBroadcastInterval: NodeJS.Timeout | undefined
+
+function workerStatus() {
+  if (isInMaintenance()) return 'maintenance'
+  return areAllServicesUp() ? 'ready' : 'unavailable'
+}
 
 export function startWebSocketServer() {
   wss = new WebSocketServer({ port: config.websocketPort })
+  if (!statusBroadcastInterval) {
+    statusBroadcastInterval = setInterval(() => {
+      void broadcastStatus()
+    }, 1000)
+  }
 
   wss.on('connection', (ws, req) => {
     const auth = req.headers['sec-websocket-protocol']
@@ -26,7 +38,7 @@ export function startWebSocketServer() {
       if (message === 'ping') {
         ws.send(
           JSON.stringify({
-            status: isInMaintenance() ? 'maintenance' : 'ready',
+            status: workerStatus(),
             slots: {
               used: getUsedSlots(),
               available: getAvailableSlots(),
@@ -43,35 +55,32 @@ export function startWebSocketServer() {
 }
 
 export async function broadcastStatus() {
-  if (!wss) return
-  const usedMemoryPercent = await getUsedMemoryPercent()
-  const status = JSON.stringify({
-    status: isInMaintenance() ? 'maintenance' : 'ready',
-    slots: {
-      used: getUsedSlots(),
-      available: getAvailableSlots(),
-      limit: getMaxSlots(),
-      queue: getQueueLength(),
-    },
-    system: {
-      uptime: process.uptime(),
-      cpuLoad: getCpuLoad(),
-      usedMemoryPercent: Math.round(usedMemoryPercent * 1000) / 10,
-    },
-    services: getServicesHealth(),
-  })
+  if (!wss || broadcastRunning) return
+  broadcastRunning = true
+  try {
+    const usedMemoryPercent = await getUsedMemoryPercent()
+    const status = JSON.stringify({
+      status: workerStatus(),
+      slots: {
+        used: getUsedSlots(),
+        available: getAvailableSlots(),
+        limit: getMaxSlots(),
+        queue: getQueueLength(),
+      },
+      system: {
+        uptime: process.uptime(),
+        cpuLoad: getCpuLoad(),
+        usedMemoryPercent: Math.round(usedMemoryPercent * 1000) / 10,
+      },
+      services: getServicesHealth(),
+    })
 
-  for (const client of wss.clients) {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(status)
+    for (const client of wss.clients) {
+      if (client.readyState === WebSocket.OPEN) client.send(status)
     }
+  } catch (err) {
+    log('[WEBSOKET]', 'Unable to broadcast Worker status:', err)
+  } finally {
+    broadcastRunning = false
   }
-}
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __statusBroadcastInterval: NodeJS.Timeout | undefined
-}
-if (!global.__statusBroadcastInterval) {
-  global.__statusBroadcastInterval = setInterval(broadcastStatus, 1000)
 }

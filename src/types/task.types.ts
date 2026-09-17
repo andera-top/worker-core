@@ -2,6 +2,7 @@ export type ParamType = 'string' | 'number' | 'boolean' | 'object' | 'array'
 
 export type ParamSchema = {
   type: ParamType
+  description?: string
   required?: boolean
   default?: any
   enum?: any[]
@@ -20,6 +21,7 @@ export type FunctionConfig = {
 }
 
 export type FunctionDefinition = {
+  description?: string
   params: { [key: string]: ParamSchema }
   config?: FunctionConfig
   handler: (

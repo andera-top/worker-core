@@ -18,6 +18,7 @@ export function enableMaintenance() {
 export function disableMaintenance() {
   inMaintenance = false
   broadcastStatus()
+  processQueue()
 }
 
 export function isInMaintenance() {
@@ -41,7 +42,7 @@ export function release() {
 }
 
 export function getAvailableSlots(): number {
-  return inMaintenance ? 0 : maxSlots - usedSlots
+  return inMaintenance || !areAllServicesUp() ? 0 : maxSlots - usedSlots
 }
 
 export function getUsedSlots(): number {
