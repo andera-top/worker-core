@@ -1,20 +1,20 @@
 export const config = {
   logLevel: process.env.LOG_LEVEL?.toLowerCase() || 'info',
-  maxLogs: parseInt(process.env.MAX_LOGS || '1000', 10),
+  maxLogs: Number(process.env.MAX_LOGS || '1000'),
   authKey: process.env.AUTH_KEY || '',
   lbAuthKey: process.env.LB_AUTH_KEY || '',
   group: process.env.GROUP || '',
-  contract: parseInt(process.env.CONTRACT || '1', 10),
-  port: parseInt(process.env.PORT || '3000', 10),
-  websocketPort: parseInt(process.env.WEBSOCKET_PORT || '3001', 10),
+  contract: Number(process.env.CONTRACT || '1'),
+  port: Number(process.env.PORT || '3000'),
+  websocketPort: Number(process.env.WEBSOCKET_PORT || '3001'),
   worker: {
     maxRetries: 1,
-    slots: parseInt(process.env.SLOTS || '10', 10),
-    defaultTimeout: parseInt(process.env.DEFAULT_TIMEOUT || '30000', 10),
+    slots: Number(process.env.SLOTS || '10'),
+    defaultTimeout: Number(process.env.DEFAULT_TIMEOUT || '30000'),
     webhook: {
-      timeout: parseInt(process.env.WEBHOOK_TIMEOUT || '5000', 10),
-      maxRetries: parseInt(process.env.WEBHOOK_MAX_RETRIES || '3', 10),
-      retryDelay: parseInt(process.env.WEBHOOK_RETRY_DELAY || '1000', 10),
+      timeout: Number(process.env.WEBHOOK_TIMEOUT || '5000'),
+      maxRetries: Number(process.env.WEBHOOK_MAX_RETRIES || '3'),
+      retryDelay: Number(process.env.WEBHOOK_RETRY_DELAY || '1000'),
       headers: process.env.WEBHOOK_HEADERS ? JSON.parse(process.env.WEBHOOK_HEADERS) : {},
     },
   },
@@ -23,12 +23,37 @@ export const config = {
 }
 
 function assertConfig() {
-  if (!config.authKey) throw new Error('Missing AUTH_KEY in environment')
-  if (!config.lbAuthKey) throw new Error('Missing LB_AUTH_KEY in environment')
-  if (!config.group) throw new Error('Missing GROUP in environment')
-  if (!config.port) throw new Error('Missing PORT in environment')
-  if (!config.websocketPort) throw new Error('Missing WEBSOCKET_PORT in environment')
-  if (config.maxLogs <= 0) throw new Error('MAX_LOGS must be > 0')
-  if (config.worker.slots <= 0) throw new Error('SLOTS must be > 0')
+  if (!['debug', 'info', 'warn', 'error'].includes(config.logLevel)) throw new Error('LOG_LEVEL must be debug, info, warn or error')
+  if (!config.authKey || config.authKey !== config.authKey.trim()) throw new Error('Missing or invalid AUTH_KEY in environment')
+  if (!config.lbAuthKey || config.lbAuthKey !== config.lbAuthKey.trim()) throw new Error('Missing or invalid LB_AUTH_KEY in environment')
+  if (config.authKey === config.lbAuthKey) throw new Error('AUTH_KEY and LB_AUTH_KEY must be distinct')
+  if (!config.group.trim() || config.group !== config.group.trim()) throw new Error('Missing or invalid GROUP in environment')
+  if (!Number.isSafeInteger(config.contract) || config.contract < 1) throw new Error('CONTRACT must be a positive integer')
+  for (const [name, value] of [
+    ['PORT', config.port],
+    ['WEBSOCKET_PORT', config.websocketPort],
+  ] as const) {
+    if (!Number.isInteger(value) || value < 1 || value > 65535) throw new Error(`${name} must be an integer between 1 and 65535`)
+  }
+  for (const [name, value] of [
+    ['MAX_LOGS', config.maxLogs],
+    ['SLOTS', config.worker.slots],
+    ['DEFAULT_TIMEOUT', config.worker.defaultTimeout],
+    ['WEBHOOK_TIMEOUT', config.worker.webhook.timeout],
+    ['WEBHOOK_RETRY_DELAY', config.worker.webhook.retryDelay],
+  ] as const) {
+    if (!Number.isInteger(value) || value < 1) throw new Error(`${name} must be a positive integer`)
+  }
+  if (!Number.isInteger(config.worker.webhook.maxRetries) || config.worker.webhook.maxRetries < 0) {
+    throw new Error('WEBHOOK_MAX_RETRIES must be a non-negative integer')
+  }
+  if (
+    !config.worker.webhook.headers ||
+    typeof config.worker.webhook.headers !== 'object' ||
+    Array.isArray(config.worker.webhook.headers) ||
+    Object.values(config.worker.webhook.headers).some(value => typeof value !== 'string')
+  ) {
+    throw new Error('WEBHOOK_HEADERS must be a JSON object containing string values')
+  }
 }
 assertConfig()

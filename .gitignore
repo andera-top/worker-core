@@ -9,6 +9,7 @@
 
 # Environment variables
 /.env
+/*.tgz
 
 # npm and Yarn
 npm-debug.log*

@@ -14,13 +14,17 @@ import { maintenanceController } from './controllers/maintenanceController'
 import { collectTags } from './dynamic/resolveTags'
 import { defaultController } from './controllers/defaultController'
 import openAPIController from './controllers/openAPIController'
+import { createWorkerMcp } from './mcp/runtime'
+import { setMcpStatus } from './mcp/state'
+import { executeTask } from './dynamic/taskExecution'
+import { isInMaintenance } from './slots/slotsManager'
+import { areAllServicesUp } from './dynamic/resolveServices'
 
 configureSlots(config.worker.slots)
 
 const app = express()
 
 app.use(compression())
-app.use(express.json({ limit: config.requestBodyLimit }))
 
 function mountControllers(app: express.Application) {
   app.use(defaultController)
@@ -44,7 +48,22 @@ export async function bootstrap(config: any, rootDir?: string) {
   await resolveServices(path.join(workerRootDir, 'services'))
   await collectTags(path.join(workerRootDir, 'tags'))
 
+  const mcp = createWorkerMcp({
+    root: path.resolve(workerRootDir, '..'),
+    functions: () => loadedFunctions || new Map(),
+    available: () => !isInMaintenance() && areAllServicesUp(),
+    execute: executeTask,
+    report: message => log('[MCP]', message),
+  })
+  setMcpStatus(mcp.status)
+  app.use('/mcp', mcp.router)
   mountControllers(app)
+  app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    log('[WORKER]', 'Unhandled request error')
+    if (res.headersSent) return next(err)
+    const status = err?.type === 'entity.too.large' ? 413 : err instanceof SyntaxError && 'body' in err ? 400 : 500
+    res.status(status).json({ error: status < 500 ? 'Invalid request' : 'Internal server error' })
+  })
 
   startWebSocketServer()
 
@@ -60,11 +79,3 @@ export function getWorkerRootDir() {
 export function getLoadedFunctions() {
   return loadedFunctions
 }
-
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  log('Unhandled error:', err)
-  if (res.headersSent) {
-    return next(err)
-  }
-  res.status(500).json({ error: 'Internal server error' })
-})

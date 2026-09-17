@@ -5,10 +5,16 @@ import { collectTags } from '../dynamic/resolveTags'
 import path from 'path'
 import { getWorkerRootDir, getLoadedFunctions } from '../app'
 import { getQueueLength } from '../slots/taskQueue'
-import { getServicesHealth } from '../dynamic/resolveServices'
+import { areAllServicesUp, getServicesHealth } from '../dynamic/resolveServices'
 import { getCpuLoad, getUsedMemoryPercent } from '../utils/systemStats'
+import { getMcpStatus } from '../mcp/state'
 
 export const healthController: Router = express.Router()
+
+function workerStatus() {
+  if (isInMaintenance()) return 'maintenance'
+  return areAllServicesUp() ? 'ready' : 'unavailable'
+}
 
 healthController.get('/health', async (_req: Request, res: Response) => {
   const rawAuth = _req.headers['authorization'] || _req.headers['x-lb-auth']
@@ -22,7 +28,7 @@ healthController.get('/health', async (_req: Request, res: Response) => {
 
   if (!isAuthorized) {
     return res.json({
-      status: isInMaintenance() ? 'maintenance' : 'ready',
+      status: workerStatus(),
     })
   }
 
@@ -32,18 +38,21 @@ healthController.get('/health', async (_req: Request, res: Response) => {
   const functionsMap = getLoadedFunctions() || new Map()
   const functions = Array.from(functionsMap.entries()).map(([name, def]) => ({
     name,
+    description: def.description,
     params: def.params,
+    config: { supportsStreaming: def.config?.supportsStreaming === true },
   }))
 
   const uptime = process.uptime()
   const usedMemoryPercent = await getUsedMemoryPercent()
 
   res.json({
-    status: isInMaintenance() ? 'maintenance' : 'ready',
+    status: workerStatus(),
     group: config.group,
     contract: config.contract,
     websocketPort: config.websocketPort,
     functions,
+    mcp: getMcpStatus(),
     services: getServicesHealth(),
     tags,
     slots: {

@@ -11,6 +11,7 @@
 ## What is Andera?
 
 Andera is composed of three main components:
+
 - **Load Balancer:** Routes and prioritizes tasks, manages worker clusters, and provides a dashboard for monitoring.
 - **Base Worker:** Template for building your own custom workers.
 - **Worker Core:** The core engine for all workers.
@@ -73,3 +74,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for repository guidelines, and [How to Co
 ## License
 
 For license details, see the [LICENSE](LICENSE) file.
+
+## Native MCP
+
+This release adds an optional `/mcp` endpoint to Worker bootstrap. Set a distinct `MCP_AUTH_KEY` and create `mcp.json` in the consuming Worker's application root. For example, `{"functions":["hello"]}` exposes only hello; `{}` exposes all loaded functions.
+
+Configuration reloads without restarting. Missing configuration/token disables MCP. MCP uses the same task validation, queue and slots as REST, with optional function and parameter descriptions for the tool catalog. Existing handlers require no changes.
+
+MCP-only credentials do not grant REST logs or maintenance access. Authenticated health exposes safe MCP metadata. See [Worker MCP documentation](https://andera.top/docs/base-worker/mcp).
+
+Run `npm test` to build and test protocol behavior, filtering, hot reload, auth isolation and actual Worker execution.
