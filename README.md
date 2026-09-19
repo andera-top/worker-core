@@ -4,7 +4,19 @@
 
 # Andera Worker Core
 
-**Andera** is a high-performance, source-available Task Orchestration Platform (TOP) designed for simplicity, flexibility, and scalability.
+**Andera** is a source-available platform for exposing business functions as REST APIs and MCP tools for AI agents. Run a Worker directly or use the Load Balancer to route tasks across Workers; agents connect through one `/mcp` endpoint and one dedicated token.
+
+---
+
+## Native MCP
+
+This release adds an optional `/mcp` endpoint to Worker bootstrap. Set a distinct `MCP_AUTH_KEY` and create `mcp.json` in the consuming Worker's application root. For example, `{"functions":["hello"]}` exposes only hello; `{}` exposes all loaded functions.
+
+Configuration reloads without restarting. Missing configuration/token disables MCP. MCP uses the same task validation, queue and slots as REST, with optional function and parameter descriptions for the tool catalog. Existing handlers require no changes.
+
+MCP-only credentials do not grant REST logs or maintenance access. Authenticated health exposes safe MCP metadata. See [Worker MCP documentation](https://andera.top/docs/base-worker/mcp).
+
+Run `npm test` to build and test protocol behavior, filtering, hot reload, auth isolation and actual Worker execution.
 
 ---
 
@@ -12,7 +24,7 @@
 
 Andera is composed of three main components:
 
-- **Load Balancer:** Routes and prioritizes tasks, manages worker clusters, and provides a dashboard for monitoring.
+- **Load Balancer:** Routes tasks, monitors Workers, and exposes functions across groups/contracts through one MCP endpoint.
 - **Base Worker:** Template for building your own custom workers.
 - **Worker Core:** The core engine for all workers.
 
@@ -30,6 +42,8 @@ It provides orchestration, slot management, contract validation, logging, and ru
 
 ## Features
 
+- Native MCP endpoint with one dedicated token, generated tool schemas and hot-reloaded function selection
+- REST task execution
 - Slot orchestration and management
 - Contract validation
 - Logging and monitoring
@@ -48,12 +62,17 @@ To use it, create a new worker using the [Base Worker template](https://andera.t
 
 ## Usage
 
-See [Base Worker Usage](https://andera.top/docs/base-worker/usage/) for how to use Worker Core in your own worker. Worker Core is not tested directly. To verify that Worker Core is working correctly, test a Base Worker that depends on it:
+See [Base Worker Usage](https://andera.top/docs/base-worker/usage/) to run your business functions through REST or MCP. Application developers normally start from the Base Worker template.
 
-1. Start your Base Worker (see its README for instructions).
-2. Use the health check and function call endpoints as described in the [Base Worker Testing Guide](https://andera.top/docs/base-worker/test/).
+Contributors can test Worker Core directly:
 
-If your Base Worker responds correctly, Worker Core is functioning as expected.
+```sh
+npm ci
+npm test
+npm run lint
+```
+
+The test suite builds TypeScript and covers the MCP protocol, authentication, live configuration changes, validation, services and actual Worker execution. See [the implementation review](IMPLEMENTATION_REVIEW.md) for validation results and release limitations.
 
 ---
 
@@ -74,13 +93,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for repository guidelines, and [How to Co
 ## License
 
 For license details, see the [LICENCE](LICENCE) file.
-
-## Native MCP
-
-This release adds an optional `/mcp` endpoint to Worker bootstrap. Set a distinct `MCP_AUTH_KEY` and create `mcp.json` in the consuming Worker's application root. For example, `{"functions":["hello"]}` exposes only hello; `{}` exposes all loaded functions.
-
-Configuration reloads without restarting. Missing configuration/token disables MCP. MCP uses the same task validation, queue and slots as REST, with optional function and parameter descriptions for the tool catalog. Existing handlers require no changes.
-
-MCP-only credentials do not grant REST logs or maintenance access. Authenticated health exposes safe MCP metadata. See [Worker MCP documentation](https://andera.top/docs/base-worker/mcp).
-
-Run `npm test` to build and test protocol behavior, filtering, hot reload, auth isolation and actual Worker execution.
