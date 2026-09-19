@@ -4,7 +4,7 @@
 
 # Andera Worker Core
 
-**Andera** is a high-performance, open-source Task Orchestration Platform (TOP) designed for simplicity, flexibility, and scalability.
+**Andera** is a high-performance, source-available Task Orchestration Platform (TOP) designed for simplicity, flexibility, and scalability.
 
 ---
 
@@ -66,14 +66,14 @@ If your Base Worker responds correctly, Worker Core is functioning as expected.
 
 ## Contributing
 
-Andera is open source and community-driven!
+Andera makes its source available and welcomes community contributions.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for repository guidelines, and [How to Contribute](https://andera.top/docs/contribute) for the project's philosophy and license.
 
 ---
 
 ## License
 
-For license details, see the [LICENSE](LICENSE) file.
+For license details, see the [LICENCE](LICENCE) file.
 
 ## Native MCP
 

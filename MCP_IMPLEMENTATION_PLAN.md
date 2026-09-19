@@ -32,7 +32,11 @@ Worker `mcp.json`: optional `functions` allowlist. LB `mcp.json`: `targets` with
 
 Update the separate worker-core, load-balancer, base-worker and website repositories. Prepare source, tests, builds and local previews. Publishing packages, pushing commits and public deployment are separate release actions.
 
-## Results
+## Initial implementation results (2026-09-17)
+
+The follow-up review, fixes, current validation and release limitations are recorded in
+[IMPLEMENTATION_REVIEW.md](IMPLEMENTATION_REVIEW.md). Current suites: 15 Core tests
+and 15 LB tests; Docker examples and website validation now use Node 24.
 
 - Worker Core: 8 passing tests, including actual-process MCP and REST sync/stream/webhook execution, slot limits, maintenance, health permissions, safe errors and revocation.
 - Load Balancer: 9 passing tests, including an actual LB process, Redis, HTTP/WebSocket Worker fixture, credential forwarding, stream lifetime reservation, error propagation, the limited dashboard summary and mixed-version contract compatibility.
