@@ -7,6 +7,7 @@ import { getWorkerRootDir, getLoadedFunctions } from '../app'
 import { getQueueLength } from '../slots/taskQueue'
 import { areAllServicesUp, getServicesHealth } from '../dynamic/resolveServices'
 import { getCpuLoad, getUsedMemoryPercent } from '../utils/systemStats'
+import { getTimedOutExecutions } from '../dynamic/functionRunner'
 import { getMcpStatus } from '../mcp/state'
 
 export const healthController: Router = express.Router()
@@ -55,6 +56,7 @@ healthController.get('/health', async (_req: Request, res: Response, next: NextF
       functions,
       mcp: getMcpStatus(),
       services: getServicesHealth(),
+      executions: { timedOutRunning: getTimedOutExecutions() },
       tags,
       slots: {
         used: getUsedSlots(),

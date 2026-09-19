@@ -20,14 +20,16 @@ export type FunctionConfig = {
   logResult?: boolean
 }
 
+export type FunctionContext = {
+  /** Aborted when this execution attempt reaches its timeout. */
+  signal: AbortSignal
+  stream?: (chunk: string) => void
+  webhook?: string
+}
+
 export type FunctionDefinition = {
   description?: string
   params: { [key: string]: ParamSchema }
   config?: FunctionConfig
-  handler: (
-    params: any,
-    context?: {
-      stream?: (chunk: string) => void
-    }
-  ) => Promise<any>
+  handler: (params: any, context?: FunctionContext) => Promise<any>
 }

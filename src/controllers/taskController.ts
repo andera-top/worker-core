@@ -3,6 +3,7 @@ import { sendWebhook } from '../utils/webhookManager'
 import { log } from '../utils/logger'
 import { requireAuth } from '../middleware/auth'
 import { executeTask, TaskError } from '../dynamic/taskExecution'
+import { FunctionTimeoutError } from '../dynamic/functionRunner'
 import { config } from '../config'
 
 export const taskController: Router = express.Router()
@@ -33,6 +34,9 @@ taskController.post('/task', requireAuth({ type: 'both' }), express.json({ limit
     if (res.headersSent) {
       res.end()
       return
+    }
+    if (err instanceof FunctionTimeoutError) {
+      return res.status(504).json({ success: false, error: 'Function execution timed out', code: 'FUNCTION_TIMEOUT' })
     }
     const status = err instanceof TaskError ? err.status : 500
     res.status(status).json({ success: false, error: err instanceof TaskError ? err.message : 'Function execution failed' })

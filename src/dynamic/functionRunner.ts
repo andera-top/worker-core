@@ -1,6 +1,6 @@
 import { log } from '../utils/logger'
 import { config } from '../config'
-import type { FunctionDefinition, ParamSchema } from '../types/task.types'
+import type { FunctionDefinition, FunctionContext, ParamSchema } from '../types/task.types'
 import { isDeepStrictEqual } from 'util'
 
 export function defineFunction(def: FunctionDefinition): FunctionDefinition {
@@ -9,24 +9,70 @@ export function defineFunction(def: FunctionDefinition): FunctionDefinition {
 
 export class FunctionInputError extends Error {}
 
-export async function executeFunction(def: FunctionDefinition, rawInput: any, context?: { stream?: (chunk: string) => void; webhook?: string }): Promise<any> {
+export class FunctionTimeoutError extends Error {
+  constructor(readonly completion: Promise<void>) {
+    super('Function execution timed out')
+    this.name = 'FunctionTimeoutError'
+  }
+}
+
+const timedOutExecutions = new Map<symbol, { function: string; startedAt: string; timedOutAt: string; timeoutMs: number }>()
+
+export function getTimedOutExecutions() {
+  return Array.from(timedOutExecutions.values(), entry => ({ ...entry }))
+}
+
+export async function executeFunction(
+  def: FunctionDefinition,
+  rawInput: any,
+  context?: Omit<FunctionContext, 'signal'>,
+  functionName = 'anonymous'
+): Promise<any> {
   const params = validateParams(def.params, rawInput)
   const { timeout: timeoutMs = config.worker.defaultTimeout, maxRetries = 0 } = def.config ?? {}
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1) throw new Error('Function timeout must be a positive integer')
   if (!Number.isInteger(maxRetries) || maxRetries < 0) throw new Error('Function maxRetries must be a non-negative integer')
 
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+    const controller = new AbortController()
+    const executionId = Symbol()
+    const startedAt = new Date().toISOString()
+    let acceptingStream = true
     let timer: ReturnType<typeof setTimeout> | undefined
+    const handlerContext: FunctionContext = {
+      ...context,
+      signal: controller.signal,
+      stream: context?.stream
+        ? chunk => {
+            if (acceptingStream && !controller.signal.aborted) context.stream?.(chunk)
+          }
+        : undefined,
+    }
+    // Capture synchronous throws too. Completion always settles successfully so
+    // the queue can wait for cleanup without creating an unhandled rejection.
+    const handler = Promise.resolve().then(() => def.handler(params, handlerContext))
+    const clearExecution = () => {
+      timedOutExecutions.delete(executionId)
+    }
+    const completion = handler.then(clearExecution, clearExecution)
     try {
       const deadline = new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error('Timeout')), timeoutMs)
+        timer = setTimeout(() => {
+          const error = new FunctionTimeoutError(completion)
+          timedOutExecutions.set(executionId, { function: functionName, startedAt, timedOutAt: new Date().toISOString(), timeoutMs })
+          acceptingStream = false
+          // Settle the deadline first, even if an abort listener rejects or
+          // resolves the handler synchronously while performing cleanup.
+          reject(error)
+          controller.abort(error)
+        }, timeoutMs)
       })
-      const result = await Promise.race([def.handler(params, context), deadline])
-      return result
+      return await Promise.race([handler, deadline])
     } catch (err) {
       log('[FUNCTION]', `Function failed (attempt ${attempt}/${maxRetries + 1})`, err)
-      if (attempt > maxRetries) throw err
+      if (err instanceof FunctionTimeoutError || attempt > maxRetries) throw err
     } finally {
+      acceptingStream = false
       if (timer) clearTimeout(timer)
     }
   }

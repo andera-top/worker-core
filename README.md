@@ -40,6 +40,14 @@ It provides orchestration, slot management, contract validation, logging, and ru
 
 ---
 
+## Function timeouts and cancellation
+
+Worker Core passes an `AbortSignal` as `context.signal` to each handler attempt. Pass it to cancellable APIs such as `fetch(url, { signal: context?.signal })`, and check `context?.signal.throwIfAborted()` between steps. Existing functions remain compatible, but must use the signal to cooperate with cancellation.
+
+At a function timeout, the caller receives an error immediately and the signal is aborted. The Worker keeps the slot until the handler settles, including cleanup. Timeout failures are never retried by the function runner; ordinary failures can still use `maxRetries`. Authenticated Worker `/health` lists lingering executions under `executions.timedOutRunning`, with function name, start/deadline timestamps and configured timeout; no inputs or credentials are included.
+
+Direct REST calls return HTTP 504 with `code: "FUNCTION_TIMEOUT"` before any stream headers have been sent; MCP calls return a tool error. Late handler stream output is discarded. A handler that ignores cancellation can keep its slot indefinitely. Blocking synchronous code cannot be interrupted this way, and completed external side effects are not undone. Handlers must await their child operations for slot accounting to cover them.
+
 ## Features
 
 - Native MCP endpoint with one dedicated token, generated tool schemas and hot-reloaded function selection

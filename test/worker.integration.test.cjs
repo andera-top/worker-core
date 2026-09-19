@@ -62,6 +62,20 @@ exports.flaky = {
 }
 `
   )
+  const finishFile = path.join(root, 'finish-timeout')
+  await fs.writeFile(
+    path.join(root, 'src/functions/slow.js'),
+    `
+const fs = require('node:fs')
+exports.slow = {
+  params: {}, config: { timeout: 30, maxRetries: 2, logResult: false },
+  handler: async (_args, { signal }) => {
+    while (!fs.existsSync(${JSON.stringify(finishFile)})) await new Promise(resolve => setTimeout(resolve, 10))
+    return { aborted: signal.aborted }
+  }
+}
+`
+  )
   const configFile = path.join(root, 'mcp.json')
   await fs.writeFile(configFile, JSON.stringify({ functions: ['hello'] }))
   const port = await freePort(),
@@ -198,4 +212,27 @@ exports.flaky = {
   assert.equal((await rest({ function: 'hello', contract: 1, input: {} })).status, 200)
   await fs.unlink(configFile)
   assert.equal((await health(env.AUTH_KEY)).mcp.enabled, false)
+  await fs.writeFile(configFile, JSON.stringify({ functions: ['slow'] }))
+  for (const transport of ['REST', 'MCP']) {
+    if (transport === 'REST') {
+      const timeout = await rest({ function: 'slow', contract: 1 })
+      assert.equal(timeout.status, 504)
+      assert.deepEqual(await timeout.json(), { success: false, error: 'Function execution timed out', code: 'FUNCTION_TIMEOUT' })
+    } else {
+      assert.equal((await client.callTool({ name: 'slow', arguments: {} })).isError, true)
+    }
+    const pending = await health(env.AUTH_KEY)
+    assert.equal(pending.slots.used, 1)
+    assert.equal(pending.slots.available, 0)
+    assert.equal(pending.executions.timedOutRunning.length, 1)
+    assert.equal(pending.executions.timedOutRunning[0].function, 'slow')
+    assert.equal((await health('')).executions, undefined)
+    assert.equal((await health(env.MCP_AUTH_KEY)).executions, undefined)
+    await fs.writeFile(finishFile, 'release')
+    await waitFor(async () => {
+      const done = await health(env.AUTH_KEY)
+      return done.slots.used === 0 && done.executions.timedOutRunning.length === 0
+    })
+    await fs.unlink(finishFile)
+  }
 })

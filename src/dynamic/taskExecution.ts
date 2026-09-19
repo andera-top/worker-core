@@ -58,7 +58,7 @@ export async function executeTask(payload: any, context?: { stream?: (chunk: str
     await addTaskToQueue(parsedPriority, async () => {
       if (isInMaintenance()) throw new TaskError(503, 'Worker is in maintenance mode')
       log('[TASK]', 'Function call:', name)
-      result = await executeFunction(definition, input, context)
+      result = await executeFunction(definition, input, context, name)
       if (definition.config?.logResult !== false) log('[TASK]', 'Function result:', name, result)
     })
   } catch (error) {

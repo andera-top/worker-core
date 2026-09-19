@@ -1,4 +1,4 @@
-export { defineFunction, executeFunction } from './dynamic/functionRunner'
+export { defineFunction, executeFunction, FunctionTimeoutError } from './dynamic/functionRunner'
 export { defineService } from './dynamic/serviceManager'
 export { stopAllServices, getServiceTags } from './dynamic/resolveServices'
 export { collectTags } from './dynamic/resolveTags'
@@ -7,6 +7,6 @@ export { startWebSocketServer, broadcastStatus } from './websocket/websocketServ
 export { resolveFunctions } from './dynamic/resolveFunctions'
 export { resolveServices } from './dynamic/resolveServices'
 
-export type { ParamType, ParamSchema, FunctionConfig, FunctionDefinition } from './types/task.types'
+export type { ParamType, ParamSchema, FunctionConfig, FunctionContext, FunctionDefinition } from './types/task.types'
 
 export type { ServiceConfig, ServiceDefinition } from './types/service.types'

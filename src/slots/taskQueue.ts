@@ -1,4 +1,5 @@
 import { acquire, release } from '../slots/slotsManager'
+import { FunctionTimeoutError } from '../dynamic/functionRunner'
 import { Heap } from 'heap-js'
 import { getAvailableSlots } from '../slots/slotsManager'
 
@@ -37,7 +38,12 @@ export async function processQueue() {
           next
             .execute()
             .then(() => next.resolve && next.resolve())
-            .catch(err => next.reject && next.reject(err))
+            .catch(async err => {
+              // Reply at the deadline, but keep ownership of the slot until the
+              // original handler settles (including cooperative cleanup).
+              next.reject?.(err)
+              if (err instanceof FunctionTimeoutError) await err.completion
+            })
             .finally(() => {
               release()
             })

@@ -6,6 +6,21 @@ local source and generated artifacts, with regression tests for confirmed bugs.
 It is not a penetration test, production load test or a guarantee that no other
 bugs remain. No packages were published and nothing was pushed or deployed.
 
+## Follow-up — cooperative cancellation (2026-09-20)
+
+Function deadlines now abort `context.signal`, return a timeout error promptly,
+and keep the Worker slot until the handler settles. Timeout attempts are never
+retried; ordinary failures retain sequential retry behavior. Late stream output
+is discarded. Authenticated Worker health includes `executions.timedOutRunning`
+without task inputs or credentials. The LB treats HTTP 504, upstream request
+timeouts and expired caller contexts as unrecoverable jobs.
+
+Current suites: 19 Core tests and 15 LB tests. Added coverage includes cooperative
+cancellation, delayed cleanup, ignored signals, late rejection/stream writes,
+slot retention, REST/MCP deadlines, health privacy and LB timeout retry suppression.
+The earlier audit results below describe the original review; the timeout limit
+has been revised to reflect this follow-up.
+
 ## Assessment
 
 The chosen architecture remains appropriate: an optional `/mcp` endpoint in the
@@ -39,7 +54,7 @@ implements its own login.
 | Deployment | Basic auth examples conflicted with MCP's Authorization header; admin path matching missed exact/case variants; Docker still used Node 20. | Scope Basic auth to admin paths, preserve bearer forwarding, correct backend ports/timeouts, use Node 24 images and pass REQUEST_BODY_LIMIT through Compose. |
 | Documentation/site | Several defaults, webhook behaviors, service-health examples and metadata were inaccurate. License wording did not match the repository text. | Correct the examples and defaults, preserve MCP prominence, use per-page metadata, and describe the project as source-available under its actual repository license. |
 
-## Validation
+## Initial review validation (2026-09-19)
 
 - Worker Core: **15 tests passing**; Load Balancer: **15 tests passing**.
   Suites run on Node 24 and Node 18; the final Worker health regression was
@@ -71,12 +86,13 @@ implements its own login.
 
 These are explicit boundaries, not claims of completed hardening.
 
-1. **Timeouts do not cancel handlers.** `Promise.race` rejects the caller while
-   the function may continue. Retries can repeat side effects, and released slots
-   do not strictly bound still-running timed-out handlers. Use idempotent tasks
-   and appropriate timeouts; functions requiring hard cancellation need an
-   isolated process or cooperative cancellation design. Stream timeouts are not
-   a universal execution deadline.
+1. **Cancellation remains cooperative.** A function timeout aborts its signal,
+   suppresses retries and returns an error, while retaining the slot until the
+   handler settles. Ignoring the signal can occupy a slot indefinitely. Blocking
+   JavaScript cannot be interrupted in-process, and unawaited child operations
+   outlive handler accounting. Use isolated execution for hard cancellation.
+   Completed external side effects are not undone. An LB/client deadline or
+   disconnection does not itself send cancellation to the Worker.
 2. **One active LB per queue.** Pending HTTP resolvers and Worker credentials live
    in that LB's memory. Another LB consuming the same `tasks` queue, or a restart,
    cannot resume those requests. Durable multi-LB operation needs a different

@@ -35,7 +35,7 @@ Update the separate worker-core, load-balancer, base-worker and website reposito
 ## Initial implementation results (2026-09-17)
 
 The follow-up review, fixes, current validation and release limitations are recorded in
-[IMPLEMENTATION_REVIEW.md](IMPLEMENTATION_REVIEW.md). Current suites: 15 Core tests
+[IMPLEMENTATION_REVIEW.md](IMPLEMENTATION_REVIEW.md). Current suites: 19 Core tests
 and 15 LB tests; Docker examples and website validation now use Node 24.
 
 - Worker Core: 8 passing tests, including actual-process MCP and REST sync/stream/webhook execution, slot limits, maintenance, health permissions, safe errors and revocation.
