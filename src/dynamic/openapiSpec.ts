@@ -12,17 +12,18 @@ function paramTypeToOpenAPI(type: ParamType) {
     case 'object':
       return { type: 'object' }
     case 'array':
-      return { type: 'array' }
+      return { type: 'array', items: {} }
     default:
       return { type: 'string' }
   }
 }
 
 function paramsToOpenAPI(params: { [key: string]: ParamSchema }) {
-  const properties: Record<string, any> = {}
+  const properties: Record<string, any> = Object.create(null)
   const required: string[] = []
   for (const [name, def] of Object.entries(params)) {
     const prop: any = paramTypeToOpenAPI(def.type)
+    if (def.description) prop.description = def.description
     if (def.default !== undefined) prop.default = def.default
     if (def.enum) prop.enum = def.enum
     if (def.pattern) prop.pattern = def.pattern
@@ -62,7 +63,7 @@ export function getOpenAPISpec() {
           required: ['url'],
         },
       },
-      required: ['function', 'contract'],
+      required: required.length ? ['function', 'contract', 'input'] : ['function', 'contract'],
     })
   }
 

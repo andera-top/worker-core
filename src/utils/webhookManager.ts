@@ -9,6 +9,7 @@ export async function sendWebhook(url: string, data: any, customHeaders?: Record
     try {
       await axios.post(url, data, {
         timeout,
+        maxRedirects: 0,
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'Andera',

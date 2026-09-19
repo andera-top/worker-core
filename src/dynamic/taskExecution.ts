@@ -28,14 +28,14 @@ function validWebhookUrl(value: unknown): boolean {
 export async function executeTask(payload: any, context?: { stream?: (chunk: string) => void }): Promise<any> {
   if (isInMaintenance()) throw new TaskError(503, 'Worker is in maintenance mode')
   const { function: name, input, priority = 1, contract, mode, webhook } = payload || {}
-  const parsedPriority = Number(priority)
+  const parsedPriority = priority
   if (!Number.isInteger(parsedPriority) || parsedPriority < 1 || parsedPriority > 2097152)
     throw new TaskError(400, 'Invalid priority: must be an integer between 1 and 2097152')
   if (!name || typeof name !== 'string') throw new TaskError(400, 'Missing or invalid function name')
   if (!Number.isSafeInteger(contract) || contract < 1) throw new TaskError(400, 'Missing or invalid contract')
   if (contract !== config.contract) throw new TaskError(400, 'Contract version mismatch')
   if (input !== undefined && (!input || typeof input !== 'object' || Array.isArray(input))) throw new TaskError(400, 'Invalid input, must be an object')
-  if (mode && !['sync', 'stream', 'webhook'].includes(mode)) throw new TaskError(400, 'Invalid mode')
+  if (mode !== undefined && !['sync', 'stream', 'webhook'].includes(mode)) throw new TaskError(400, 'Invalid mode')
   const definition = getFunction(name)
   if (!definition) throw new TaskError(404, 'Function not found')
   if (mode === 'stream' && !definition.config?.supportsStreaming) throw new TaskError(400, 'Function does not support streaming')
@@ -44,7 +44,11 @@ export async function executeTask(payload: any, context?: { stream?: (chunk: str
     (!webhook ||
       typeof webhook !== 'object' ||
       !validWebhookUrl(webhook.url) ||
-      (webhook.headers !== undefined && (!webhook.headers || typeof webhook.headers !== 'object' || Array.isArray(webhook.headers))))
+      (webhook.headers !== undefined &&
+        (!webhook.headers ||
+          typeof webhook.headers !== 'object' ||
+          Array.isArray(webhook.headers) ||
+          Object.values(webhook.headers).some(value => typeof value !== 'string'))))
   ) {
     throw new TaskError(400, 'Missing or invalid webhook.url for mode webhook')
   }

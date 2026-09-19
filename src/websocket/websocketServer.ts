@@ -16,7 +16,11 @@ function workerStatus() {
 }
 
 export function startWebSocketServer() {
-  wss = new WebSocketServer({ port: config.websocketPort })
+  wss = new WebSocketServer({
+    port: config.websocketPort,
+    maxPayload: 1024,
+    verifyClient: ({ req }: { req: import('http').IncomingMessage }) => req.headers['sec-websocket-protocol'] === config.lbAuthKey,
+  })
   if (!statusBroadcastInterval) {
     statusBroadcastInterval = setInterval(() => {
       void broadcastStatus()
@@ -24,6 +28,7 @@ export function startWebSocketServer() {
   }
 
   wss.on('connection', (ws, req) => {
+    ws.on('error', () => log('[WEBSOKET]', 'Invalid WebSocket frame; connection closed'))
     const auth = req.headers['sec-websocket-protocol']
     if (auth !== config.lbAuthKey) {
       ws.close(4001, 'Unauthorized')

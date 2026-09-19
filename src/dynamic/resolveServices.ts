@@ -43,7 +43,7 @@ export async function resolveServices(dir: string): Promise<void> {
   startServiceLifecycle()
 }
 
-async function stopAllServices() {
+export async function stopAllServices() {
   for (const svc of runningServices) {
     if (typeof svc.def.stop === 'function') {
       try {
@@ -54,6 +54,19 @@ async function stopAllServices() {
       }
     }
   }
+}
+
+export async function getServiceTags(): Promise<Record<string, any>> {
+  const tags: Record<string, any> = Object.create(null)
+  for (const svc of runningServices) {
+    if (!svc.def.status) continue
+    try {
+      tags[svc.name] = await svc.def.status()
+    } catch {
+      tags[svc.name] = { error: 'Status failed' }
+    }
+  }
+  return tags
 }
 
 let healthCheckRunning = false

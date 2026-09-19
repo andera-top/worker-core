@@ -1,5 +1,6 @@
 export { defineFunction, executeFunction } from './dynamic/functionRunner'
-export { defineService, stopAllServices, getServiceTags } from './dynamic/serviceManager'
+export { defineService } from './dynamic/serviceManager'
+export { stopAllServices, getServiceTags } from './dynamic/resolveServices'
 export { collectTags } from './dynamic/resolveTags'
 export { configureSlots, acquire, release, isInMaintenance } from './slots/slotsManager'
 export { startWebSocketServer, broadcastStatus } from './websocket/websocketServer'

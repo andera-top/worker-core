@@ -1,6 +1,7 @@
 import { log } from '../utils/logger'
 import { config } from '../config'
 import type { FunctionDefinition, ParamSchema } from '../types/task.types'
+import { isDeepStrictEqual } from 'util'
 
 export function defineFunction(def: FunctionDefinition): FunctionDefinition {
   return def
@@ -43,23 +44,23 @@ function validateParams(schema: { [key: string]: ParamSchema }, input: any): any
   }
 
   for (const [key, rule] of Object.entries(schema)) {
-    let value = input?.[key]
+    let value = input && Object.prototype.hasOwnProperty.call(input, key) ? input[key] : undefined
 
     if (value === undefined) {
       if (rule.required) throw new FunctionInputError(`Missing required param: ${key}`)
-      value = rule.default
+      value = rule.default && typeof rule.default === 'object' ? structuredClone(rule.default) : rule.default
     }
 
     if (value !== undefined && !isTypeValid(rule.type, value)) {
       throw new FunctionInputError(`Invalid type for param: ${key}, expected ${rule.type}`)
     }
 
-    if (rule.enum && value !== undefined && !rule.enum.includes(value)) {
+    if (rule.enum && value !== undefined && !rule.enum.some(option => isDeepStrictEqual(option, value))) {
       throw new FunctionInputError(`Invalid value for param: ${key}, expected one of ${JSON.stringify(rule.enum)}`)
     }
 
     if (rule.pattern && typeof value === 'string') {
-      const regex = new RegExp(rule.pattern)
+      const regex = new RegExp(rule.pattern, 'u')
       if (!regex.test(value)) {
         throw new FunctionInputError(`Invalid format for param: ${key}, does not match pattern ${rule.pattern}`)
       }
@@ -69,7 +70,7 @@ function validateParams(schema: { [key: string]: ParamSchema }, input: any): any
       if (typeof value === 'number' && value < rule.min) {
         throw new FunctionInputError(`Value for param: ${key} must be >= ${rule.min}`)
       }
-      if (typeof value === 'string' && value.length < rule.min) {
+      if (typeof value === 'string' && Array.from(value).length < rule.min) {
         throw new FunctionInputError(`Length of param: ${key} must be >= ${rule.min}`)
       }
       if (Array.isArray(value) && value.length < rule.min) {
@@ -80,7 +81,7 @@ function validateParams(schema: { [key: string]: ParamSchema }, input: any): any
       if (typeof value === 'number' && value > rule.max) {
         throw new FunctionInputError(`Value for param: ${key} must be <= ${rule.max}`)
       }
-      if (typeof value === 'string' && value.length > rule.max) {
+      if (typeof value === 'string' && Array.from(value).length > rule.max) {
         throw new FunctionInputError(`Length of param: ${key} must be <= ${rule.max}`)
       }
       if (Array.isArray(value) && value.length > rule.max) {
