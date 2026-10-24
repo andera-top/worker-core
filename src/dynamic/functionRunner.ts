@@ -1,5 +1,5 @@
 import { log } from '../utils/logger'
-import { config } from '../config'
+import { config, MAX_TIMER_DELAY } from '../config'
 import type { FunctionDefinition, FunctionContext, ParamSchema } from '../types/task.types'
 import { isDeepStrictEqual } from 'util'
 
@@ -30,7 +30,8 @@ export async function executeFunction(
 ): Promise<any> {
   const params = validateParams(def.params, rawInput)
   const { timeout: timeoutMs = config.worker.defaultTimeout, maxRetries = 0 } = def.config ?? {}
-  if (!Number.isInteger(timeoutMs) || timeoutMs < 1) throw new Error('Function timeout must be a positive integer')
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMER_DELAY)
+    throw new Error(`Function timeout must be an integer between 1 and ${MAX_TIMER_DELAY}`)
   if (!Number.isInteger(maxRetries) || maxRetries < 0) throw new Error('Function maxRetries must be a non-negative integer')
 
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
@@ -78,7 +79,7 @@ export async function executeFunction(
   }
 }
 
-function validateParams(schema: { [key: string]: ParamSchema }, input: any): any {
+function validateParams(schema: { [key: string]: ParamSchema } = {}, input: any): any {
   const output: any = Object.create(null)
 
   if (input && typeof input === 'object') {

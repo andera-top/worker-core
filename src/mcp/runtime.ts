@@ -15,6 +15,7 @@ export function createWorkerMcp(options: {
   const env = options.env ?? process.env
   const config = new LiveConfig(path.resolve(options.root, env.MCP_CONFIG_PATH || 'mcp.json'), parseWorkerConfig, options.report)
   const token = dedicatedToken(env.MCP_AUTH_KEY, [env.AUTH_KEY, env.LB_AUTH_KEY])
+  if (env.MCP_AUTH_KEY && !token) options.report?.('MCP disabled: MCP_AUTH_KEY must contain no whitespace and differ from AUTH_KEY and LB_AUTH_KEY')
   const enabled = () => !!token && config.current() !== undefined
   const tools = (): ExposedTool[] => {
     const settings = config.current()

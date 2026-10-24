@@ -6,12 +6,45 @@ local source and generated artifacts, with regression tests for confirmed bugs.
 It is not a penetration test, production load test or a guarantee that no other
 bugs remain. No packages were published and nothing was pushed or deployed.
 
+## Follow-up — pre-release review (2026-10-24)
+
+A second review of the unpublished Core, LB and Base Worker changes found no
+high-severity issue. Fixed:
+
+- Core: functions without `params` broke REST, MCP discovery and authenticated
+  health; they now get an empty schema. Logged errors keep only name, message and
+  code, so serialized Axios errors can no longer leak upstream credentials into
+  `/logs`. An invalid `WEBHOOK_HEADERS` no longer echoes its value on startup.
+  Timer settings above 2^31-1 ms and invalid `REQUEST_BODY_LIMIT` values are
+  rejected. Internal keys use constant-time comparison. A webhook delivery
+  failure after a successful function returns 502 `WEBHOOK_FAILED` instead of a
+  function failure. A rejected `MCP_AUTH_KEY` is logged, and an unreadable
+  `mcp.json` disables MCP instead of keeping the previous allowlist.
+- LB: Worker 4xx rejections and `WEBHOOK_FAILED` are no longer retried and are
+  returned with the Worker's status and message. Webhook headers stay in memory
+  instead of Redis and Bull Board. Streams are no longer buffered by
+  compression, and a failed stream setup releases its slot. Same configuration,
+  logging, comparison and MCP fixes as Core; `workers.json` failures are logged
+  once per distinct error, and a key unusable as a WebSocket subprotocol is
+  reported at startup.
+- Base Worker: documented that `LB_AUTH_KEY` must match the LB, disabled the
+  unauthenticated OpenAPI endpoints in the example, and corrected examples,
+  defaults and Docker addressing. Docker runtimes no longer give the app user
+  write access to `dist`.
+
+Open decisions: `WEBHOOK_HEADERS` is sent to caller-chosen webhook URLs; the LB
+dashboard APIs and Bull Board have no built-in authentication; accepted LB
+webhook tasks can expire unnoticed while queued; discovery waits for the
+slowest Worker; client disconnects do not cancel Worker execution.
+
+22 Core and 15 LB tests pass on Node 24.22.1.
+
 ## Follow-up — Node.js and Brotli security update (2026-10-24)
 
 The October 21, 2026 Node.js security release fixes CVE-2026-111497, an
 out-of-bounds write in the bundled Brotli decoder (upstream Brotli 1.0.3–1.2.0),
 together with TLS hostname and DNS issues. `engines` now requires 22.23.4+,
-24.22.1+ or 26.12.1+; Node 18, 20 and 25 receive no fix. Core, LB and Base
+24.22.1+ or 26.12.1+ (Node 23 is excluded as end-of-life); Node 18, 20 and 25 receive no fix. Core, LB and Base
 Worker Docker images pin `node:24.22.1-bookworm` to build and
 `node:24.22.1-bookworm-slim` to run; the slim runtime has no system libbrotli.
 
@@ -37,7 +70,7 @@ is discarded. Authenticated Worker health includes `executions.timedOutRunning`
 without task inputs or credentials. The LB treats HTTP 504, upstream request
 timeouts and expired caller contexts as unrecoverable jobs.
 
-Current suites: 19 Core tests and 15 LB tests. Added coverage includes cooperative
+At that point: 19 Core tests and 15 LB tests. Added coverage includes cooperative
 cancellation, delayed cleanup, ignored signals, late rejection/stream writes,
 slot retention, REST/MCP deadlines, health privacy and LB timeout retry suppression.
 The earlier audit results below describe the original review; the timeout limit
@@ -81,7 +114,7 @@ implements its own login.
 - Worker Core: **15 tests passing**; Load Balancer: **15 tests passing**.
   Suites run on Node 24 and Node 18; the final Worker health regression was
   also rerun on Node 18. The final WebSocket callback regression passed there too. Node 18 compatibility is not a recommendation to deploy
-  an unsupported runtime.
+  an unsupported runtime, and is superseded by the 2026-10-24 Node requirement.
 - Integration tests run real Worker/LB processes, a local Redis instance, the
   official MCP SDK client and HTTP/WebSocket fixtures. They cover auth isolation,
   live configuration edits/deletion, slots, REST sync/stream/webhook behavior,

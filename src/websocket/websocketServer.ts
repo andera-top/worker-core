@@ -3,6 +3,7 @@ import { config } from '../config'
 import { isInMaintenance, getAvailableSlots, getUsedSlots, getMaxSlots } from '../slots/slotsManager'
 import { getQueueLength } from '../slots/taskQueue'
 import { log } from '../utils/logger'
+import { safeEqual } from '../middleware/auth'
 import { getCpuLoad, getUsedMemoryPercent } from '../utils/systemStats'
 import { areAllServicesUp, getServicesHealth } from '../dynamic/resolveServices'
 
@@ -19,7 +20,7 @@ export function startWebSocketServer() {
   wss = new WebSocketServer({
     port: config.websocketPort,
     maxPayload: 1024,
-    verifyClient: ({ req }: { req: import('http').IncomingMessage }) => req.headers['sec-websocket-protocol'] === config.lbAuthKey,
+    verifyClient: ({ req }: { req: import('http').IncomingMessage }) => safeEqual(req.headers['sec-websocket-protocol'], config.lbAuthKey),
   })
   if (!statusBroadcastInterval) {
     statusBroadcastInterval = setInterval(() => {

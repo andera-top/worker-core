@@ -25,3 +25,20 @@ test('REST parameter semantics agree with MCP for Unicode, object enums and inhe
   assert.equal(await executeFunction(defaults, {}), 1)
   assert.equal(await executeFunction(defaults, {}), 1, 'Handlers must not mutate defaults shared with later calls')
 })
+
+test('functions without params accept empty input and expose an empty schema', async () => {
+  assert.deepEqual(await executeFunction({ handler: async args => ({ ...args }) }, undefined), {})
+  assert.deepEqual(
+    { ...inputSchema(undefined), properties: { ...inputSchema(undefined).properties } },
+    { type: 'object', properties: {}, required: [], additionalProperties: false }
+  )
+})
+
+test('logged errors keep their message but never their serialized request details', () => {
+  const { log, getLogs } = require('../dist/utils/logger')
+  const err = Object.assign(new Error('Request failed'), { code: 'ECONNREFUSED', toJSON: () => ({ headers: { Authorization: 'Bearer s3cr3t' } }) })
+  log('[TEST]', err)
+  const line = getLogs().at(-1)
+  assert.match(line, /Error: Request failed \(ECONNREFUSED\)/)
+  assert.doesNotMatch(line, /s3cr3t/)
+})

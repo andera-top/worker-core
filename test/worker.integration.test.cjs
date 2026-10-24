@@ -76,6 +76,8 @@ exports.slow = {
 }
 `
   )
+  // JavaScript Workers may omit params entirely.
+  await fs.writeFile(path.join(root, 'src/functions/bare.js'), `exports.bare = { handler: async () => ({ bare: true }) }`)
   const configFile = path.join(root, 'mcp.json')
   await fs.writeFile(configFile, JSON.stringify({ functions: ['hello'] }))
   const port = await freePort(),
@@ -93,6 +95,7 @@ exports.slow = {
     LOG_LEVEL: 'error',
     MCP_CONFIG_PATH: configFile,
     OPENAPI_ENABLED: 'true',
+    WEBHOOK_MAX_RETRIES: '0',
   }
   const child = spawn(process.execPath, ['-e', `require('./dist/app').bootstrap({ port: ${port} }, ${JSON.stringify(path.join(root, 'src'))})`], {
     cwd: path.resolve(__dirname, '..'),
@@ -123,7 +126,8 @@ exports.slow = {
   const adminHealth = await health(env.AUTH_KEY)
   assert.equal(adminHealth.mcp.enabled, true)
   assert.equal(adminHealth.mcp.tools[0].name, 'hello')
-  assert.equal(adminHealth.functions[0].description, 'Integration greeting')
+  assert.deepEqual(adminHealth.functions.find(entry => entry.name === 'bare').params, {})
+  assert.equal(adminHealth.functions.find(entry => entry.name === 'hello').description, 'Integration greeting')
   assert.equal(adminHealth.services[0].state, 'up')
   // A local tags filesystem failure must become a safe response, not an unhandled rejection.
   await fs.writeFile(path.join(root, 'src/tags'), 'not a directory')
@@ -133,7 +137,7 @@ exports.slow = {
   await fs.unlink(path.join(root, 'src/tags'))
   assert.equal((await health(env.AUTH_KEY)).status, 'ready')
   const openapi = await (await fetch(base + '/openapi')).json()
-  const taskSchema = openapi.paths['/task'].post.requestBody.content['application/json'].schema.oneOf[0]
+  const taskSchema = openapi.paths['/task'].post.requestBody.content['application/json'].schema.oneOf.find(entry => entry.title === 'hello')
   assert.ok(taskSchema.required.includes('contract'))
   assert.equal(taskSchema.properties.input.properties.name.type, 'string')
   assert.equal(taskSchema.properties.name, undefined)
@@ -165,6 +169,7 @@ exports.slow = {
   assert.equal((await rest({ function: 'hello', contract: 1, mode: false })).status, 400)
   const normal = await (await rest({ function: 'hello', contract: 1, input: {} })).json()
   assert.equal(normal.result.greeting, 'World')
+  assert.deepEqual((await (await rest({ function: 'bare', contract: 1 })).json()).result, { bare: true })
   const invalidInput = await rest({ function: 'hello', contract: 1, input: { unexpected: true } })
   assert.equal(invalidInput.status, 400)
   assert.match((await invalidInput.json()).error, /Unexpected param/)
@@ -190,6 +195,10 @@ exports.slow = {
   })
   assert.equal(delivered.status, 200)
   assert.equal(webhookPayload.greeting, 'Webhook')
+  // The function ran: a delivery failure must not look like a function failure callers would retry.
+  const undelivered = await rest({ function: 'hello', contract: 1, mode: 'webhook', webhook: { url: 'http://127.0.0.1:' + (await freePort()) } })
+  assert.equal(undelivered.status, 502)
+  assert.deepEqual(await undelivered.json(), { success: false, error: 'Failed to send webhook', code: 'WEBHOOK_FAILED' })
   const first = rest({ function: 'hello', contract: 1, input: { name: 'First', delay: 200 } })
   await new Promise(resolve => setTimeout(resolve, 20))
   let secondSettled = false

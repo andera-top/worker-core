@@ -9,6 +9,7 @@ import { areAllServicesUp, getServicesHealth } from '../dynamic/resolveServices'
 import { getCpuLoad, getUsedMemoryPercent } from '../utils/systemStats'
 import { getTimedOutExecutions } from '../dynamic/functionRunner'
 import { getMcpStatus } from '../mcp/state'
+import { safeEqual } from '../middleware/auth'
 
 export const healthController: Router = express.Router()
 
@@ -26,7 +27,7 @@ healthController.get('/health', async (_req: Request, res: Response, next: NextF
       authKey = authKey.slice(7).trim()
     }
 
-    const isAuthorized = authKey === config.authKey || authKey === config.lbAuthKey
+    const isAuthorized = safeEqual(authKey, config.authKey) || safeEqual(authKey, config.lbAuthKey)
 
     if (!isAuthorized) {
       return res.json({

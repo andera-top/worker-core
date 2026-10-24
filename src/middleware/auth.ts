@@ -1,5 +1,13 @@
 import { Request, Response, NextFunction } from 'express'
+import { createHash, timingSafeEqual } from 'crypto'
 import { config } from '../config'
+
+/** Constant-time key comparison; hashing equalizes lengths. */
+export function safeEqual(value: string | undefined, key: string): boolean {
+  if (value === undefined || !key) return false
+  const hash = (input: string) => createHash('sha256').update(input).digest()
+  return timingSafeEqual(hash(value), hash(key))
+}
 
 export function requireAuth(options: { type?: 'worker' | 'lb' | 'both' | 'any'; header?: string } = { type: 'both', header: 'authorization' }) {
   if (typeof options === 'function') {
@@ -13,17 +21,17 @@ export function requireAuth(options: { type?: 'worker' | 'lb' | 'both' | 'any'; 
     if (lbAuth && lbAuth.startsWith('Bearer ')) lbAuth = lbAuth.slice(7).trim()
 
     if (options.type === 'worker') {
-      if (authKey === config.authKey) return next()
+      if (safeEqual(authKey, config.authKey)) return next()
     } else if (options.type === 'lb') {
-      if (lbAuth === config.lbAuthKey) return next()
+      if (safeEqual(lbAuth, config.lbAuthKey)) return next()
     } else if (options.type === 'both') {
       if (lbAuth !== undefined) {
-        if (authKey === config.authKey && lbAuth === config.lbAuthKey) return next()
+        if (safeEqual(authKey, config.authKey) && safeEqual(lbAuth, config.lbAuthKey)) return next()
       } else {
-        if (authKey === config.authKey) return next()
+        if (safeEqual(authKey, config.authKey)) return next()
       }
     } else if (options.type === 'any') {
-      if (authKey === config.authKey || lbAuth === config.lbAuthKey) return next()
+      if (safeEqual(authKey, config.authKey) || safeEqual(lbAuth, config.lbAuthKey)) return next()
     }
     return res.status(401).json({ error: 'Unauthorized' })
   }

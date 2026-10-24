@@ -18,7 +18,7 @@ function paramTypeToOpenAPI(type: ParamType) {
   }
 }
 
-function paramsToOpenAPI(params: { [key: string]: ParamSchema }) {
+function paramsToOpenAPI(params: { [key: string]: ParamSchema } = {}) {
   const properties: Record<string, any> = Object.create(null)
   const required: string[] = []
   for (const [name, def] of Object.entries(params)) {

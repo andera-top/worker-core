@@ -21,7 +21,8 @@ export async function resolveFunctions(dir: string): Promise<Map<string, Functio
       const mod = await import(fullPath)
       const def: FunctionDefinition = mod[name] || mod.default
       if (def && typeof def.handler === 'function') {
-        functions.set(name, def)
+        // JavaScript Workers may omit params; every consumer expects a schema object.
+        functions.set(name, def.params ? def : { ...def, params: {} })
         log('[FUNCTION]', `Function '${name}' loaded`)
       } else {
         log('[FUNCTION]', `File '${file}' does not export a valid function definition (missing 'handler')`)

@@ -15,12 +15,25 @@ export const config = {
       timeout: Number(process.env.WEBHOOK_TIMEOUT || '5000'),
       maxRetries: Number(process.env.WEBHOOK_MAX_RETRIES || '3'),
       retryDelay: Number(process.env.WEBHOOK_RETRY_DELAY || '1000'),
-      headers: process.env.WEBHOOK_HEADERS ? JSON.parse(process.env.WEBHOOK_HEADERS) : {},
+      headers: parseWebhookHeaders(process.env.WEBHOOK_HEADERS),
     },
   },
   enableOpenAPI: process.env.OPENAPI_ENABLED?.toLowerCase() === 'true',
   requestBodyLimit: process.env.REQUEST_BODY_LIMIT || '10mb',
 }
+
+function parseWebhookHeaders(value: string | undefined): Record<string, string> {
+  if (!value) return {}
+  try {
+    return JSON.parse(value)
+  } catch {
+    // The parser error echoes the input, which may contain secrets.
+    throw new Error('WEBHOOK_HEADERS must be valid JSON')
+  }
+}
+
+/** Largest delay setTimeout accepts; larger values fire after 1 ms. */
+export const MAX_TIMER_DELAY = 2147483647
 
 function assertConfig() {
   if (!['debug', 'info', 'warn', 'error'].includes(config.logLevel)) throw new Error('LOG_LEVEL must be debug, info, warn or error')
@@ -38,12 +51,18 @@ function assertConfig() {
   for (const [name, value] of [
     ['MAX_LOGS', config.maxLogs],
     ['SLOTS', config.worker.slots],
+  ] as const) {
+    if (!Number.isInteger(value) || value < 1) throw new Error(`${name} must be a positive integer`)
+  }
+  for (const [name, value] of [
     ['DEFAULT_TIMEOUT', config.worker.defaultTimeout],
     ['WEBHOOK_TIMEOUT', config.worker.webhook.timeout],
     ['WEBHOOK_RETRY_DELAY', config.worker.webhook.retryDelay],
   ] as const) {
-    if (!Number.isInteger(value) || value < 1) throw new Error(`${name} must be a positive integer`)
+    if (!Number.isInteger(value) || value < 1 || value > MAX_TIMER_DELAY) throw new Error(`${name} must be an integer between 1 and ${MAX_TIMER_DELAY}`)
   }
+  const bodyLimit = /^(\d+(?:\.\d+)?)\s*(?:b|kb|mb|gb)?$/i.exec(config.requestBodyLimit)
+  if (!bodyLimit || !(Number(bodyLimit[1]) > 0)) throw new Error('REQUEST_BODY_LIMIT must be a positive size such as 10mb')
   if (!Number.isInteger(config.worker.webhook.maxRetries) || config.worker.webhook.maxRetries < 0) {
     throw new Error('WEBHOOK_MAX_RETRIES must be a non-negative integer')
   }

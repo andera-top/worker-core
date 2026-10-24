@@ -2,7 +2,7 @@
 
 ## Agreed design
 
-One optional `/mcp` endpoint in Worker Core and the Load Balancer, using the official MCP TypeScript 1.x SDK (Node 18.14.1+/CommonJS compatible). No additional service. Clients use one dedicated `MCP_AUTH_KEY`; REST and internal credentials keep their existing roles.
+One optional `/mcp` endpoint in Worker Core and the Load Balancer, using the official MCP TypeScript 1.x SDK (CommonJS compatible; the packages now require Node ^22.23.4, ^24.22.1 or >=26.12.1). No additional service. Clients use one dedicated `MCP_AUTH_KEY`; REST and internal credentials keep their existing roles.
 
 Worker `mcp.json`: optional `functions` allowlist. LB `mcp.json`: `targets` with `group`, positive integer `contract`, `workerAuthKeyEnv`, optional `functions`. Omitted functions means all in the selected scope; `[]` means none. The files are independent. LB targets require a shared Worker key across replicas of a group/contract.
 
@@ -35,12 +35,12 @@ Update the separate worker-core, load-balancer, base-worker and website reposito
 ## Initial implementation results (2026-09-17)
 
 The follow-up review, fixes, current validation and release limitations are recorded in
-[IMPLEMENTATION_REVIEW.md](IMPLEMENTATION_REVIEW.md). Current suites: 19 Core tests
-and 15 LB tests; Docker examples and website validation now use Node 24.
+[IMPLEMENTATION_REVIEW.md](IMPLEMENTATION_REVIEW.md), which also holds the current test
+counts. The results below are those of the initial implementation.
 
 - Worker Core: 8 passing tests, including actual-process MCP and REST sync/stream/webhook execution, slot limits, maintenance, health permissions, safe errors and revocation.
 - Load Balancer: 9 passing tests, including an actual LB process, Redis, HTTP/WebSocket Worker fixture, credential forwarding, stream lifetime reservation, error propagation, the limited dashboard summary and mixed-version contract compatibility.
-- Dependency audits report zero known vulnerabilities in all four repositories. The website uses Docusaurus 3.10.2 on Node 20 with audited transitive overrides; Worker Core, Load Balancer and Base Worker support Node 18.14.1+.
+- Dependency audits report zero known vulnerabilities in all four repositories. The website uses Docusaurus 3.10.2 on Node 20 with audited transitive overrides; Worker Core, Load Balancer and Base Worker then supported Node 18.14.1+ (superseded: see the 2026-10-24 follow-up in the review).
 - Dashboard build and browser review cover the token-free endpoint/catalog summary. Website production build, TypeScript check and rendered MCP guide review passed.
 - The broader review also fixed malformed-body error handling, configuration validation, discovery serialization/parallelism, stale heartbeat timers, maintenance/service queue resumption, log URL SSRF, stream slot races, logger escape sequences and import-time background timers.
 - Client protocol tested with the official MCP SDK. Claude Code/Codex/Cursor settings are documented from official client documentation; those applications were not individually exercised. Hosted OAuth-only clients are outside V1.

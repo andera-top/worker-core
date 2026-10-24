@@ -24,7 +24,13 @@ taskController.post('/task', requireAuth({ type: 'both' }), express.json({ limit
     if (mode === 'stream') {
       res.end()
     } else if (mode === 'webhook') {
-      await sendWebhook(webhook.url, result, webhook.headers)
+      try {
+        await sendWebhook(webhook.url, result, webhook.headers)
+      } catch {
+        // The function already ran: report the delivery failure so callers do not re-run it.
+        log('[TASK]', 'Webhook delivery failed')
+        return res.status(502).json({ success: false, error: 'Failed to send webhook', code: 'WEBHOOK_FAILED' })
+      }
       res.json({ success: true, message: 'Sent to webhook' })
     } else {
       res.json({ success: true, result })
