@@ -6,6 +6,28 @@ local source and generated artifacts, with regression tests for confirmed bugs.
 It is not a penetration test, production load test or a guarantee that no other
 bugs remain. No packages were published and nothing was pushed or deployed.
 
+## Follow-up — Node.js and Brotli security update (2026-10-24)
+
+The October 21, 2026 Node.js security release fixes CVE-2026-111497, an
+out-of-bounds write in the bundled Brotli decoder (upstream Brotli 1.0.3–1.2.0),
+together with TLS hostname and DNS issues. `engines` now requires 22.23.4+,
+24.22.1+ or 26.12.1+; Node 18, 20 and 25 receive no fix. Core, LB and Base
+Worker Docker images pin `node:24.22.1-bookworm` to build and
+`node:24.22.1-bookworm-slim` to run; the slim runtime has no system libbrotli.
+
+Webhook delivery no longer decompresses responses, so a caller-chosen
+destination cannot feed Brotli data to the decoder, even on an unpatched
+runtime. Inbound Core/LB task and MCP bodies use body-parser 1.x, which rejects
+`Content-Encoding: br`; the LB Bull UI uses body-parser 2.x and does decode it,
+which is another reason to keep it behind the proxy restriction.
+
+Dependencies moved past new advisories: axios 1.20.0, compression 1.8.2, MCP SDK
+1.32.2 and, transitively, body-parser 1.20.9, proxy-addr 2.0.8, follow-redirects
+1.16.1, hono 4.13.13 and zod 4.6.7. `npm audit` reports zero known
+vulnerabilities in Core, LB and Base Worker; 20 Core and 15 LB tests pass on
+Node 24.22.1. The unpublished 0.1.6 tarball was repacked and Base Worker's
+lockfile integrity matches it; the release gates below still apply.
+
 ## Follow-up — cooperative cancellation (2026-09-20)
 
 Function deadlines now abort `context.signal`, return a timeout error promptly,

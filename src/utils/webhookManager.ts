@@ -10,6 +10,8 @@ export async function sendWebhook(url: string, data: any, customHeaders?: Record
       await axios.post(url, data, {
         timeout,
         maxRedirects: 0,
+        // The response body is unused: never decompress data chosen by the destination (e.g. Brotli, CVE-2026-111497).
+        decompress: false,
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'Andera',

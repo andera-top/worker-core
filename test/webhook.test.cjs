@@ -20,3 +20,15 @@ test('webhooks do not follow redirects that could forward custom credentials', a
   await assert.rejects(sendWebhook('http://127.0.0.1:' + server.address().port + '/redirect', {}, { 'X-Custom-Secret': 'must-not-forward' }))
   assert.equal(leaked, false)
 })
+
+test('webhooks do not decompress response bodies chosen by the destination', async t => {
+  const server = http.createServer((req, res) => {
+    req.resume()
+    // An undecodable body: decoding it would reject the delivery as a failure.
+    res.writeHead(200, { 'Content-Encoding': 'br' })
+    res.end(Buffer.from([0xff, 0xff, 0xff, 0xff]))
+  })
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+  t.after(() => new Promise(resolve => server.close(resolve)))
+  await sendWebhook('http://127.0.0.1:' + server.address().port + '/', { ok: true })
+})

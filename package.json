@@ -19,7 +19,7 @@
   ],
   "license": "Elastic License 2.0",
   "engines": {
-    "node": ">=18.14.1"
+    "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
   },
   "devDependencies": {
     "@types/compression": "^1.7.5",
@@ -33,11 +33,11 @@
   },
   "dependencies": {
     "@hono/node-server": "1.19.17",
-    "@modelcontextprotocol/sdk": "^1.30.0",
-    "axios": "^1.16.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "axios": "^1.20.0",
     "chalk": "^4.1.2",
     "chokidar": "^4.0.3",
-    "compression": "^1.8.1",
+    "compression": "^1.8.2",
     "express": "^4.22.3",
     "heap-js": "^2.6.0",
     "swagger-ui-express": "^5.0.1",
