@@ -29,7 +29,8 @@ export type FunctionContext = {
 
 export type FunctionDefinition = {
   description?: string
-  params: { [key: string]: ParamSchema }
+  /** Omit for a function that takes no parameters. */
+  params?: { [key: string]: ParamSchema }
   config?: FunctionConfig
   handler: (params: any, context?: FunctionContext) => Promise<any>
 }

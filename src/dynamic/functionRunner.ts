@@ -1,6 +1,6 @@
 import { log } from '../utils/logger'
 import { config, MAX_TIMER_DELAY } from '../config'
-import type { FunctionDefinition, FunctionContext, ParamSchema } from '../types/task.types'
+import type { FunctionDefinition, FunctionConfig, FunctionContext, ParamSchema } from '../types/task.types'
 import { isDeepStrictEqual } from 'util'
 
 export function defineFunction(def: FunctionDefinition): FunctionDefinition {
@@ -8,6 +8,14 @@ export function defineFunction(def: FunctionDefinition): FunctionDefinition {
 }
 
 export class FunctionInputError extends Error {}
+
+/** Rejects settings that would make every call fail. */
+export function assertFunctionConfig(functionConfig: FunctionConfig = {}) {
+  const { timeout = config.worker.defaultTimeout, maxRetries = 0 } = functionConfig
+  if (!Number.isInteger(timeout) || timeout < 1 || timeout > MAX_TIMER_DELAY)
+    throw new Error(`Function timeout must be an integer between 1 and ${MAX_TIMER_DELAY}`)
+  if (!Number.isInteger(maxRetries) || maxRetries < 0) throw new Error('Function maxRetries must be a non-negative integer')
+}
 
 export class FunctionTimeoutError extends Error {
   constructor(readonly completion: Promise<void>) {
@@ -29,10 +37,8 @@ export async function executeFunction(
   functionName = 'anonymous'
 ): Promise<any> {
   const params = validateParams(def.params, rawInput)
+  assertFunctionConfig(def.config)
   const { timeout: timeoutMs = config.worker.defaultTimeout, maxRetries = 0 } = def.config ?? {}
-  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMER_DELAY)
-    throw new Error(`Function timeout must be an integer between 1 and ${MAX_TIMER_DELAY}`)
-  if (!Number.isInteger(maxRetries) || maxRetries < 0) throw new Error('Function maxRetries must be a non-negative integer')
 
   for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
     const controller = new AbortController()

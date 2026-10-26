@@ -6,6 +6,20 @@ local source and generated artifacts, with regression tests for confirmed bugs.
 It is not a penetration test, production load test or a guarantee that no other
 bugs remain. No packages were published and nothing was pushed or deployed.
 
+## Follow-up — function definitions and webhook failures (2026-10-26)
+
+- Core 0.1.7: `params` is optional in the `FunctionDefinition` type, so
+  TypeScript Workers can omit it like JavaScript ones. An invalid function
+  `timeout` or `maxRetries` now stops the Worker at startup with the function
+  name, instead of failing every call with HTTP 500.
+- LB: a webhook-mode task that fails (Worker rejection, `WEBHOOK_FAILED`,
+  function error, timeout, no Worker before `TASK_TIMEOUT`) is reported to its
+  webhook as `{ success: false, error, code }` with the caller's webhook headers
+  and `X-Andera-Status: failed`. Tasks lost in an LB restart are still not
+  reported.
+
+23 Core and 15 LB tests pass on Node 24.22.1.
+
 ## Follow-up — pre-release review (2026-10-24)
 
 A second review of the unpublished Core, LB and Base Worker changes found no
@@ -34,7 +48,7 @@ high-severity issue. Fixed:
 
 Open decisions: `WEBHOOK_HEADERS` is sent to caller-chosen webhook URLs; the LB
 dashboard APIs and Bull Board have no built-in authentication; accepted LB
-webhook tasks can expire unnoticed while queued; discovery waits for the
+webhook tasks can fail unnoticed (since reported, see below); discovery waits for the
 slowest Worker; client disconnects do not cancel Worker execution.
 
 22 Core and 15 LB tests pass on Node 24.22.1.
