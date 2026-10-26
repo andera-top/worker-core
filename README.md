@@ -8,20 +8,6 @@
 
 ---
 
-## Native MCP
-
-This release adds an optional `/mcp` endpoint to Worker bootstrap. Set a distinct `MCP_AUTH_KEY` and create `mcp.json` in the consuming Worker's application root. For example, `{"functions":["hello"]}` exposes only hello; `{}` exposes all loaded functions.
-
-`MCP_CONFIG_PATH` (default `mcp.json`) resolves against the parent of the source directory passed to `bootstrap` (for example `src/` or `dist/`), i.e. the Worker's application root; absolute paths are used as is. `MCP_AUTH_KEY` must contain no whitespace and differ from `AUTH_KEY` and `LB_AUTH_KEY`; otherwise MCP stays disabled and a warning is logged. Browser requests carrying an `Origin` header are rejected unless listed in the comma-separated `MCP_ALLOWED_ORIGINS`; native clients need none. Requests are limited to 1 MB and tool results to 1 MiB.
-
-Configuration reloads without restarting. Missing configuration/token disables MCP; an unreadable `mcp.json` disables it until it can be read again. MCP uses the same task validation, queue and slots as REST, with optional function and parameter descriptions for the tool catalog. Existing handlers require no changes.
-
-MCP-only credentials do not grant REST logs or maintenance access. Authenticated health exposes safe MCP metadata. See [Worker MCP documentation](https://andera.top/docs/base-worker/mcp).
-
-Run `npm test` to build and test protocol behavior, filtering, hot reload, auth isolation and actual Worker execution.
-
----
-
 ## What is Andera?
 
 Andera is composed of three main components:
@@ -39,6 +25,21 @@ Learn more: [Andera Documentation](https://andera.top/docs/)
 Worker Core is the engine for all Andera-based workers.  
 It is never used standalone, but always as a dependency of a Base Worker.  
 It provides orchestration, slot management, contract validation, logging, and runtime for building high-performance, distributed workers.
+
+---
+
+## Native MCP
+
+The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) is the standard way for AI agents such as Claude, Cursor or VS Code to discover and call tools. Worker Core lets any Worker built on it expose its functions as MCP tools at `/mcp`. Agent calls go through the same validation, queue and slots as REST requests, and function and parameter descriptions become the tool catalog, so existing handlers need no changes.
+
+MCP is off by default. A Worker turns it on with two settings:
+
+- `MCP_AUTH_KEY`: the bearer token agents use. It must contain no whitespace and differ from `AUTH_KEY` and `LB_AUTH_KEY`; otherwise MCP stays disabled and a warning is logged. It grants no access to REST logs or maintenance.
+- `mcp.json`: the functions to expose. `{"functions":["hello"]}` exposes only `hello`; `{}` exposes every function.
+
+`mcp.json` is read from the Worker's application root, the parent of the source directory passed to `bootstrap` (for example `src/` or `dist/`); `MCP_CONFIG_PATH` points elsewhere. The file reloads without a restart: invalid edits keep the last valid selection, and a missing or unreadable file disables MCP. Browser clients must be listed in `MCP_ALLOWED_ORIGINS`; native clients need nothing. Requests are limited to 1 MB and tool results to 1 MiB.
+
+Setup, client configuration and limits: [Worker MCP documentation](https://andera.top/docs/base-worker/mcp).
 
 ---
 
