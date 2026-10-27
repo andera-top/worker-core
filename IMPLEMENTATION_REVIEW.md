@@ -29,7 +29,7 @@ high-severity issue. Fixed:
   health; they now get an empty schema. Logged errors keep only name, message and
   code, so serialized Axios errors can no longer leak upstream credentials into
   `/logs`. An invalid `WEBHOOK_HEADERS` no longer echoes its value on startup.
-  Timer settings above 2^31-1 ms and invalid `REQUEST_BODY_LIMIT` values are
+  Timer settings above 2^31-1ms and invalid `REQUEST_BODY_LIMIT` values are
   rejected. Internal keys use constant-time comparison. A webhook delivery
   failure after a successful function returns 502 `WEBHOOK_FAILED` instead of a
   function failure. A rejected `MCP_AUTH_KEY` is logged, and an unreadable
@@ -143,8 +143,8 @@ implements its own login.
   diagram; no page errors or horizontal overflow on the checked desktop pages.
 - Dependency audits: **zero known vulnerabilities** in all four repositories at
   review time. This does not audit business functions or deployed infrastructure.
-- A local 500-validation microbenchmark measured approximately 84 ms with fresh
-  AJV providers versus 1 ms with the bounded cache. This isolates validation
+- A local 500-validation microbenchmark measured approximately 84ms with fresh
+  AJV providers versus 1ms with the bounded cache. This isolates validation
   overhead; it is not a whole-system throughput result.
 - Docker runtime testing was unavailable because the local Docker daemon was
   not running. The Dockerfiles/Compose configuration were reviewed as source.

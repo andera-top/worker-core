@@ -32,7 +32,7 @@ function parseWebhookHeaders(value: string | undefined): Record<string, string> 
   }
 }
 
-/** Largest delay setTimeout accepts; larger values fire after 1 ms. */
+/** Largest delay setTimeout accepts; larger values fire after 1ms. */
 export const MAX_TIMER_DELAY = 2147483647
 
 function assertConfig() {

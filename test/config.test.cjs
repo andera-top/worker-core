@@ -19,7 +19,7 @@ test('invalid numeric Worker configuration fails fast', () => {
   assert.equal(loadConfig({ WEBHOOK_HEADERS: '{"Authorization":42}' }).status, 1)
   assert.equal(loadConfig({ LOG_LEVEL: 'verbose' }).status, 1)
   assert.equal(loadConfig({ LB_AUTH_KEY: 'worker-key' }).status, 1)
-  // Node fires larger timer delays after 1 ms.
+  // Node fires larger timer delays after 1ms.
   assert.equal(loadConfig({ DEFAULT_TIMEOUT: '3000000000' }).status, 1)
   assert.equal(loadConfig({ REQUEST_BODY_LIMIT: '10 megs' }).status, 1)
   assert.equal(loadConfig({ REQUEST_BODY_LIMIT: '0mb' }).status, 1)

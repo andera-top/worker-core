@@ -80,7 +80,7 @@ MCP is off by default. A Worker turns it on with two settings:
 - `MCP_AUTH_KEY`: the bearer token agents use. It must contain no whitespace and differ from `AUTH_KEY` and `LB_AUTH_KEY`; otherwise MCP stays disabled and a warning is logged. It grants no access to REST logs or maintenance.
 - `mcp.json`: the functions to expose. `{"functions":["hello"]}` exposes only `hello`; `{}` exposes every function.
 
-`mcp.json` is read from the Worker's application root, the parent of the source directory passed to `bootstrap` (for example `src/` or `dist/`); `MCP_CONFIG_PATH` points elsewhere. The file reloads without a restart: invalid edits keep the last valid selection, and a missing or unreadable file disables MCP. Browser clients must be listed in `MCP_ALLOWED_ORIGINS`; native clients need nothing. Requests are limited to 1 MB and tool results to 1 MiB.
+`mcp.json` is read from the Worker's application root, the parent of the source directory passed to `bootstrap` (for example `src/` or `dist/`); `MCP_CONFIG_PATH` points elsewhere. The file reloads without a restart: invalid edits keep the last valid selection, and a missing or unreadable file disables MCP. Browser clients must be listed in `MCP_ALLOWED_ORIGINS`; native clients need nothing. Requests are limited to 1MB and tool results to 1MiB.
 
 Setup, client configuration and limits: [Worker MCP documentation](https://andera.top/docs/base-worker/mcp).
 
